@@ -1,0 +1,8 @@
+services:
+  vps-info-panel:
+    build: .
+    ports: ["8787:8787"]
+    environment:
+      JWT_SECRET: "请改成30位以上随机字符串"
+    volumes: ["./data:/data"]
+    restart: unless-stopped

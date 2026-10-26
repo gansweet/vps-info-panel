@@ -1,0 +1,11 @@
+name = "vps-info-panel"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vps-info-db"
+database_id = "00000000-0000-0000-0000-000000000000"   # 部署到 Cloudflare 时换成真实 ID（本地/Docker 可不改）
+
+[triggers]
+crons = ["* * * * *"]   # 每分钟：离线/负载/到期判断 + 网站检测
