@@ -1,6 +1,6 @@
 # 🛰️ VPS信息面板 v2.0
 
-Cloudflare Workers + D1 的 VPS 探针 / 网站在线信息面板。单文件 `worker.js`，零依赖，**兼容原版 `cfmonitor.sh` 探针**（旧探针无需改动）。
+Cloudflare Workers + D1 的 VPS 探针 / 网站在线信息面板。单文件 `worker.js`，零依赖，**兼容原版 `cfmonitor.sh` 探针**。
 
 ## ✨ 功能
 - 🖥️ **服务器信息**：卡片（环形图为主）/ 列表（文字为主）两种视图；顶部汇总所有 VPS（在线数、平均 CPU、总内存、实时/总流量）

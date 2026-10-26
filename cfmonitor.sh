@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# cf-vps-monitor - Cloudflare Worker VPS监控脚本
-# 版本: 1.1.0
+# VPS信息脚本
+# 版本: 2.0
 # 支持所有常见Linux系统，无需root权限
 
 set -euo pipefail
