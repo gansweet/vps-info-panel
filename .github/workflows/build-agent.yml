@@ -25,7 +25,9 @@ jobs:
             gcc -O2 -Wall -static -DUSE_OPENSSL -o dist/vpsagent-linux-${{ matrix.arch }} agent/vpsagent.c -lssl -lcrypto &&
             ./dist/vpsagent-linux-${{ matrix.arch }} -V'
       - uses: actions/upload-artifact@v4
-        with: { name: linux-${{ matrix.arch }}, path: dist/* }
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/*
   macos:
     runs-on: macos-latest
     continue-on-error: true      # macOS 构建失败不影响 Linux 发布
