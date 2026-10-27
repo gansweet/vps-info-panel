@@ -9,3 +9,7 @@ database_id = "00000000-0000-0000-0000-000000000000"   # 部署到 Cloudflare �
 
 [triggers]
 crons = ["* * * * *"]   # 每分钟：离线/负载/到期判断 + 网站检测
+
+# [vars]
+# GITHUB_REPO = "你的用户名/仓库名"   # 可选：也可在后台「系统设置」填写 GitHub 仓库地址
+# 密钥类变量请用：npx wrangler secret put JWT_SECRET  /  ADMIN_PASSWORD  /  METRICS_TOKEN

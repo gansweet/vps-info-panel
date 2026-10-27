@@ -1,7 +1,8 @@
+# 探针镜像：静态链接 + scratch，约 1MB。构建：docker build -t vpsagent agent/
 FROM alpine:3.20 AS b
-RUN apk add --no-cache build-base pkgconf curl-dev curl-static openssl-libs-static zlib-static nghttp2-static brotli-static c-ares-static libidn2-static libunistring-static zstd-static
+RUN apk add --no-cache build-base openssl-dev openssl-libs-static
 COPY vpsagent.c /s/
-RUN gcc -O2 -static -o /vpsagent /s/vpsagent.c $(pkg-config --static --cflags --libs libcurl)
+RUN gcc -O2 -Wall -static -DUSE_OPENSSL -o /vpsagent /s/vpsagent.c -lssl -lcrypto && /vpsagent -V
 FROM scratch
 COPY --from=b /vpsagent /vpsagent
 COPY --from=b /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

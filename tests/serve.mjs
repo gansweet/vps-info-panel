@@ -1,0 +1,10 @@
+// 本地起一个面板（node:sqlite 模拟 D1），用于手动联调：node tests/serve.mjs [端口]  →  打印 id/key，默认账号 amos/sweet
+import { DatabaseSync } from 'node:sqlite'; import fs from 'node:fs'; import http from 'node:http';
+fs.copyFileSync(new URL('../worker.js', import.meta.url), '/tmp/w2.mjs'); const W = (await import('/tmp/w2.mjs')).default; const db = new DatabaseSync(process.env.DB || ':memory:');
+class S { constructor(q) { this.q = q; this.a = []; } bind(...a) { this.a = a; return this; } async run() { return { success: true, meta: db.prepare(this.q).run(...this.a) }; } async first() { return db.prepare(this.q).get(...this.a) ?? null; } async all() { return { results: db.prepare(this.q).all(...this.a).map(x => ({ ...x })) }; } }
+const env = { DB: { prepare: q => new S(q), batch: async a => { for (const s of a) await s.run(); return []; } }, JWT_SECRET: 'dev' }, port = +process.argv[2] || 8787, ctx = { waitUntil() { } };
+http.createServer(async (rq, rs) => { if (process.env.DL_DIR && rq.url.startsWith('/dl/') && fs.existsSync(process.env.DL_DIR + rq.url.slice(3))) { rs.writeHead(200); return rs.end(fs.readFileSync(process.env.DL_DIR + rq.url.slice(3))); } const ch = []; for await (const c of rq) ch.push(c); const r = await W.fetch(new Request('http://127.0.0.1:' + port + rq.url, { method: rq.method, headers: rq.headers, body: ch.length ? Buffer.concat(ch) : undefined, redirect: 'manual' }), env, ctx); rs.writeHead(r.status, Object.fromEntries(r.headers)); rs.end(Buffer.from(await r.arrayBuffer())); }).listen(port, async () => {
+  if (process.env.SEED) { const tk = (await (await fetch(`http://127.0.0.1:${port}/api/auth/login`, { method: 'POST', body: JSON.stringify({ username: 'amos', password: 'sweet' }) })).json()).token, h = { authorization: 'Bearer ' + tk };
+    await fetch(`http://127.0.0.1:${port}/api/admin/settings`, { method: 'PUT', headers: h, body: JSON.stringify({ report_interval: '5' }) });
+    const r = await (await fetch(`http://127.0.0.1:${port}/api/admin/servers`, { method: 'POST', headers: h, body: JSON.stringify({ name: 'installer-test' }) })).json(); console.log('SEED', r.id, r.api_key); }
+  console.log('LISTEN', port); });

@@ -1,40 +1,53 @@
 name: build-agent
+# 推送 agent/ 改动到 main → 更新滚动发布 agent-latest；打标签 v* → 正式 Release。也可在 Actions 页面手动运行。
 on:
-  push: { tags: ['v*'] }
+  push:
+    branches: [main]
+    paths: ['agent/**', '.github/workflows/build-agent.yml']
+    tags: ['v*']
   workflow_dispatch:
-permissions: { contents: write }
+permissions:
+  contents: write
 jobs:
   linux:
+    runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include: [{ os: ubuntu-latest, arch: amd64 }, { os: ubuntu-24.04-arm, arch: arm64 }]
-    runs-on: ${{ matrix.os }}
+      fail-fast: false
+      matrix: { arch: [amd64, arm64] }
     steps:
       - uses: actions/checkout@v4
-      - name: 静态编译（Alpine/musl）
+      - uses: docker/setup-qemu-action@v3
+      - name: 静态编译（Alpine/musl + OpenSSL，无需 libcurl）
         run: |
           mkdir -p dist
-          docker run --rm -v "$PWD":/w -w /w alpine:3.20 sh -c '
-            apk add --no-cache build-base pkgconf curl-dev curl-static openssl-libs-static zlib-static nghttp2-static brotli-static c-ares-static libidn2-static libunistring-static zstd-static &&
-            gcc -O2 -static -o dist/vpsagent-linux-${{ matrix.arch }} agent/vpsagent.c $(pkg-config --static --cflags --libs libcurl)'
+          docker run --rm --platform linux/${{ matrix.arch }} -v "$PWD":/w -w /w alpine:3.20 sh -c '
+            apk add --no-cache build-base openssl-dev openssl-libs-static &&
+            gcc -O2 -Wall -static -DUSE_OPENSSL -o dist/vpsagent-linux-${{ matrix.arch }} agent/vpsagent.c -lssl -lcrypto &&
+            ./dist/vpsagent-linux-${{ matrix.arch }} -V'
       - uses: actions/upload-artifact@v4
         with: { name: linux-${{ matrix.arch }}, path: dist/* }
   macos:
     runs-on: macos-latest
+    continue-on-error: true      # macOS 构建失败不影响 Linux 发布
     steps:
       - uses: actions/checkout@v4
       - run: |
           mkdir -p dist
-          cc -O2 -arch arm64  -o dist/vpsagent-darwin-arm64 agent/vpsagent.c -lcurl
-          cc -O2 -arch x86_64 -o dist/vpsagent-darwin-amd64 agent/vpsagent.c -lcurl
+          cc -O2 -Wall -arch arm64  -o dist/vpsagent-darwin-arm64 agent/vpsagent.c -lcurl
+          cc -O2 -Wall -arch x86_64 -o dist/vpsagent-darwin-amd64 agent/vpsagent.c -lcurl
       - uses: actions/upload-artifact@v4
         with: { name: darwin, path: dist/* }
   release:
     needs: [linux, macos]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ !cancelled() && needs.linux.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with: { path: dist, merge-multiple: true }
       - uses: softprops/action-gh-release@v2
-        with: { files: dist/*, generate_release_notes: true }
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'agent-latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'agent-latest（滚动构建）' }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: dist/*
